@@ -44,8 +44,6 @@ The script checks Python 3.9+, nmap, and git; creates `~/.snekmap/`; installs pi
 ```bash
 ./install.sh --help     # show requirements, what gets installed, uninstall steps
 ```
-```
-
 ### Manual
 
 ```bash
