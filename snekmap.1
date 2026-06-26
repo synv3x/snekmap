@@ -1,0 +1,174 @@
+.TH SNEKMAP 1 "June 2026" "SnekMap 0.1.0" "User Commands"
+.
+.SH NAME
+snekmap \- network reconnaissance and vulnerability assessment
+.
+.SH SYNOPSIS
+.B snekmap
+[\fIOPTIONS\fR]
+.I TARGET
+.
+.SH DESCRIPTION
+.B SnekMap
+is a command-line network scanner that combines nmap-based port and service
+detection with automated CVE correlation, default credential testing,
+protocol-specific misconfiguration checks, cross-finding correlation, and
+multi-format report generation.
+.PP
+.I TARGET
+may be a single IP address, a hostname, or a CIDR range
+(e.g.\& \fB192.168.1.1\fR, \fBscanme.nmap.org\fR, \fB10.0.0.0/24\fR).
+.PP
+SnekMap runs in three stages after scanning:
+.TP
+\fBCVE correlation\fR
+Per-port CVE lookup via the NIST NVD API v2.0.
+Service detection confidence below 60% suppresses correlation entirely;
+version confidence below 70% restricts matching to the major version only.
+Results are cached locally at
+.I ~/.snekmap/cve_cache.json
+for 24 hours.
+.TP
+\fBCredential testing\fR
+Common default credentials are tested against FTP (port 21), SSH (22),
+MySQL (3306), and Redis (6379) when those ports are open.
+.TP
+\fBProtocol checks\fR
+Active misconfiguration probes: LDAP anonymous binding (389), SMB null
+sessions (139/445), DNS zone transfer AXFR (53), NFS world-accessible
+exports (111/2049), and SNMP weak community strings (161).
+.PP
+A correlation pass then analyses the combined findings for patterns such
+as Active Directory Domain Controller indicators, database-and-web-server
+co-location (SQL injection escalation), and anomalous OS/service
+combinations.
+.
+.SH OPTIONS
+.TP
+.BR \-f ", " \-\-fast
+Fast scan: top 100 ports only.
+Faster on large networks but may miss non-standard service ports.
+.TP
+.BR \-d ", " \-\-deep
+Deep scan: all 65535 ports.
+Slow; best suited for focused single-host assessments.
+These two flags are mutually exclusive.
+.TP
+.B \-\-no\-cve
+Skip CVE lookups.
+Useful when working offline or when speed matters more than vulnerability data.
+.TP
+.BI \-\-export " FORMAT"
+Export a report without the interactive menu.
+.I FORMAT
+is one of:
+.BR html ", " pdf ", " json ", " csv ", " all .
+.TP
+.BI \-o " DIR" ", \-\-output\-dir " DIR
+Directory in which to save report files.
+Defaults to
+.B ~/Desktop
+if it exists, then
+.BR ~/.snekmap/reports .
+.TP
+.BR \-q ", " \-\-quiet
+Suppress the banner and all progress spinners.
+Useful when piping output or running from scripts.
+.TP
+.BR \-v ", " \-\-version
+Print the SnekMap version string and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a short usage summary and exit.
+.
+.SH ENVIRONMENT
+.TP
+.B NVD_API_KEY
+When set, authenticates requests to the NIST NVD API and raises the rate
+limit from 5 to 50 requests per 30 seconds \(em roughly 10x faster CVE
+lookups on targets with many open ports.
+Request a free key at \fIhttps://nvd.nist.gov/developers/request-an-api-key\fR.
+.
+.SH FILES
+.TP
+.I ~/.snekmap/cve_cache.json
+Disk-backed CVE result cache.
+Entries expire after 24 hours.
+Safe to delete; it will be recreated on the next scan.
+.TP
+.I ~/.snekmap/reports/
+Default report output directory when
+.B ~/Desktop
+does not exist.
+.
+.SH EXAMPLES
+.TP
+Standard scan of a single host:
+.RS
+.nf
+snekmap 192.168.1.10
+.fi
+.RE
+.TP
+Fast scan of a /24 network:
+.RS
+.nf
+snekmap 192.168.1.0/24 \-f
+.fi
+.RE
+.TP
+Deep scan with OS detection (requires root) and PDF export:
+.RS
+.nf
+sudo snekmap 10.0.0.5 \-d \-\-export pdf
+.fi
+.RE
+.TP
+Offline scan — no CVE lookup, no internet needed:
+.RS
+.nf
+snekmap 192.168.1.10 \-\-no\-cve
+.fi
+.RE
+.TP
+Quiet JSON export for automated pipelines:
+.RS
+.nf
+snekmap 10.0.0.0/24 \-q \-\-export json \-o /tmp/scans
+.fi
+.RE
+.
+.SH NOTES
+OS detection (\fB\-O\fR) is passed to nmap automatically and requires
+root or Administrator privileges.
+SnekMap falls back to a scan without OS detection when elevated privileges
+are unavailable; all other features remain functional.
+.PP
+Protocol checks (LDAP, SMB, DNS, NFS, SNMP) require the corresponding
+command-line tools (\fBldapsearch\fR, \fBsmbclient\fR, \fBdig\fR,
+\fBshowmount\fR, \fBsnmpwalk\fR) to be installed.
+Missing tools are silently skipped.
+.PP
+SSH and MySQL credential testing requires the optional Python packages
+\fBparamiko\fR and \fBpymysql\fR respectively.
+Uncomment the relevant lines in \fIrequirements.txt\fR and run
+\fBpip install \-r requirements.txt\fR to enable them.
+.
+.SH SEE ALSO
+.BR nmap (1),
+.BR curl (1),
+.BR dig (1),
+.BR smbclient (1),
+.BR ldapsearch (1)
+.
+.SH BUGS
+Report issues at \fIhttps://github.com/synv3x/snekmap/issues\fR.
+.
+.SH AUTHOR
+synv3x.
+CVE data provided by the NIST National Vulnerability Database
+(\fIhttps://nvd.nist.gov\fR).
+.
+.SH LICENSE
+MIT License.
+See the \fILICENSE\fR file in the source distribution for full text.
