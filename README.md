@@ -49,7 +49,7 @@ The script checks Python 3.9+, nmap, and git; creates `~/.snekmap/`; installs pi
 ```bash
 git clone https://github.com/synv3x/snekmap.git
 cd snekmap
-pip install -r requirements.txt
+pip install -r requirements.txt --break-system-packages
 python snekmap.py --help
 ```
 
